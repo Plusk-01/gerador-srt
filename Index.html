@@ -1,0 +1,80 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Gerador de SRT</title>
+  <style>
+    body { background: #111; color: white; font-family: Arial, sans-serif; text-align: center; padding: 40px; }
+    textarea { width: 80%; height: 300px; padding: 10px; font-size: 16px; }
+    button { margin: 10px; padding: 10px 20px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; }
+    #convert { background-color: red; color: white; }
+    #download { background-color: yellow; color: black; }
+    pre { text-align: left; white-space: pre-wrap; background: #222; padding: 20px; border-radius: 5px; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>Gerador de SRT</h1>
+  <textarea id="inputText" placeholder="Cole seu texto aqui fdp..."></textarea><br>
+  <button id="convert">Converter para SRT</button>
+  <button id="download">Baixar Vírus</button>
+  <pre id="output"></pre>
+
+  <script>
+    function splitIntoChunks(text, minLen, maxLen) {
+      const endPunctuation = /[.!?\"]/;
+      const sentences = text.match(/[^.!?\"]+[.!?\"]/g) || [];
+      let chunks = [], current = "";
+
+      for (let sentence of sentences) {
+        if ((current + sentence).length <= maxLen) {
+          current += sentence;
+        } else if (current.length >= minLen) {
+          chunks.push(current.trim());
+          current = sentence;
+        } else {
+          current += sentence;
+        }
+      }
+      if (current.length > 0) {
+        let finalChunk = current.trim();
+        if (!endPunctuation.test(finalChunk.slice(-1))) {
+          finalChunk += ".";
+        }
+        chunks.push(finalChunk);
+      }
+      return chunks;
+    }
+
+    function secondsToTimestamp(seconds) {
+      const hrs = String(Math.floor(seconds / 3600)).padStart(2, '0');
+      const mins = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+      const secs = String(seconds % 60).padStart(2, '0');
+      return `${hrs}:${mins}:${secs},000`;
+    }
+
+    document.getElementById("convert").onclick = function () {
+      const inputText = document.getElementById("inputText").value;
+      const chunks = splitIntoChunks(inputText, 350, 500);
+      let srt = "";
+      for (let i = 0; i < chunks.length; i++) {
+        const start = i * 45;
+        const end = start + 30;
+        srt += `${i + 1}\n${secondsToTimestamp(start)} --> ${secondsToTimestamp(end)}\n${chunks[i]}\n\n`;
+      }
+      document.getElementById("output").textContent = srt;
+    };
+
+    document.getElementById("download").onclick = function () {
+      const text = document.getElementById("output").textContent;
+      const blob = new Blob([text], { type: "text/srt" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "legenda.srt";
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+  </script>
+</body>
+</html>
