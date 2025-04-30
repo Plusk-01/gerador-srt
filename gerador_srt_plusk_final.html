@@ -1,0 +1,111 @@
+
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gerador de SRT</title>
+  <style>
+    body { background: #111; color: #fff; font-family: Arial, sans-serif; padding: 20px; }
+    textarea { width: 100%; height: 200px; font-size: 16px; margin-bottom: 15px; padding: 10px; }
+    .button-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .buttons {
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      cursor: pointer;
+    }
+    .credit {
+      font-size: 12px;
+      color: #888;
+    }
+    pre { background: #222; padding: 15px; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+
+  <h1>GERADOR DE SRT</h1>
+  <textarea id="inputText" placeholder="Cole aqui o texto..."></textarea><br />
+
+  <div class="button-container">
+    <div class="buttons">
+      <button onclick="gerarSRT()">Converter para SRT</button>
+      <button onclick="baixarSRT()">Download SRT</button>
+    </div>
+    <div class="credit">By: Plusk 😎</div>
+  </div>
+
+  <pre id="srtOutput"></pre>
+
+  <script>
+    let srtContent = '';
+
+    function gerarSRT() {
+      const texto = document.getElementById('inputText').value.trim();
+      const frases = texto.match(/[^\.\!\?]+[\.\!\?]+/g);
+      if (!frases) {
+        document.getElementById('srtOutput').textContent = 'Nenhuma frase completa encontrada.';
+        return;
+      }
+
+      let tempoAtual = 0;
+      let index = 1;
+      srtContent = '';
+      let bloco = '';
+
+      for (let i = 0; i < frases.length; i++) {
+        let frase = frases[i].trim();
+        if (!frase) continue;
+
+        const novaTentativa = (bloco ? bloco + ' ' : '') + frase;
+
+        if (novaTentativa.length <= 500) {
+          bloco = novaTentativa;
+        } else {
+          if (bloco) {
+            const inicio = formatarTempo(tempoAtual);
+            const fim = formatarTempo(tempoAtual + 30);
+            srtContent += `${index}\n${inicio} --> ${fim}\n${bloco}\n\n`;
+            tempoAtual += 45; // 30s duração + 15s pausa
+            index++;
+          }
+          bloco = frase;
+        }
+      }
+
+      if (bloco) {
+        const inicio = formatarTempo(tempoAtual);
+        const fim = formatarTempo(tempoAtual + 30);
+        srtContent += `${index}\n${inicio} --> ${fim}\n${bloco}\n\n`;
+      }
+
+      document.getElementById('srtOutput').textContent = srtContent;
+    }
+
+    function formatarTempo(segundos) {
+      const h = String(Math.floor(segundos / 3600)).padStart(2, '0');
+      const m = String(Math.floor((segundos % 3600) / 60)).padStart(2, '0');
+      const s = String(Math.floor(segundos % 60)).padStart(2, '0');
+      const ms = '000';
+      return `${h}:${m}:${s},${ms}`;
+    }
+
+    function baixarSRT() {
+      const blob = new Blob([srtContent], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'legenda.srt';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+
+</body>
+</html>
