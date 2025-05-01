@@ -28,13 +28,27 @@
 
       for (let sentence of sentences) {
         if ((current + sentence).length <= maxLen) {
-          current += sentence;
-        } else if (current.length >= minLen) {
-          chunks.push(current.trim());
-          current = sentence;
-        } else {
-          current += sentence;
-        }
+  current += sentence;
+} else {
+  if (current.length >= minLen) {
+    chunks.push(current.trim());
+    current = sentence;
+  } else {
+    if (sentence.length > maxLen) {
+      // Quebra a sentença longa em pedaços de até maxLen
+      let parts = sentence.match(new RegExp(`.{1,${maxLen}}(?=[.!?\\"]|\\s|$)`, 'g'));
+      for (let i = 0; i < parts.length; i++) {
+        let part = parts[i].trim();
+        if (!/[.!?"”]$/.test(part)) part += '.';
+        chunks.push(part);
+      }
+      current = '';
+    } else {
+      chunks.push(current.trim());
+      current = sentence;
+    }
+  }
+}
       }
       if (current.length > 0) {
         let finalChunk = current.trim();
