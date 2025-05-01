@@ -21,43 +21,23 @@
   <pre id="output"></pre>
 
   <script>
-    function splitIntoChunks(text, minLen, maxLen) {
-      const endPunctuation = /[.!?\"]/;
-      const sentences = text.match(/[^.!?\"]+[.!?\"]/g) || [];
-      let chunks = [], current = "";
+    function splitIntoBlocksPreservingOriginal(text, maxChars = 500) {
+      const sentences = text.match(/[^.]+\./g) || [];
+      let blocks = [], current = "";
 
       for (let sentence of sentences) {
-        if ((current + sentence).length <= maxLen) {
-  current += sentence;
-} else {
-  if (current.length >= minLen) {
-    chunks.push(current.trim());
-    current = sentence;
-  } else {
-    if (sentence.length > maxLen) {
-      // Quebra a sentença longa em pedaços de até maxLen
-      let parts = sentence.match(new RegExp(`.{1,${maxLen}}(?=[.!?\\"]|\\s|$)`, 'g'));
-      for (let i = 0; i < parts.length; i++) {
-        let part = parts[i].trim();
-        if (!/[.!?"”]$/.test(part)) part += '.';
-        chunks.push(part);
-      }
-      current = '';
-    } else {
-      chunks.push(current.trim());
-      current = sentence;
-    }
-  }
-}
-      }
-      if (current.length > 0) {
-        let finalChunk = current.trim();
-        if (!endPunctuation.test(finalChunk.slice(-1))) {
-          finalChunk += ".";
+        sentence = sentence.trim();
+        if ((current + " " + sentence).trim().length <= maxChars) {
+          current = (current + " " + sentence).trim();
+        } else {
+          if (current.length > 0) blocks.push(current);
+          current = sentence;
         }
-        chunks.push(finalChunk);
       }
-      return chunks;
+
+      if (current.length > 0) blocks.push(current);
+
+      return blocks;
     }
 
     function secondsToTimestamp(seconds) {
@@ -69,12 +49,12 @@
 
     document.getElementById("convert").onclick = function () {
       const inputText = document.getElementById("inputText").value;
-      const chunks = splitIntoChunks(inputText, 350, 500);
+      const blocks = splitIntoBlocksPreservingOriginal(inputText);
       let srt = "";
-      for (let i = 0; i < chunks.length; i++) {
+      for (let i = 0; i < blocks.length; i++) {
         const start = i * 45;
         const end = start + 30;
-        srt += `${i + 1}\n${secondsToTimestamp(start)} --> ${secondsToTimestamp(end)}\n${chunks[i]}\n\n`;
+        srt += `${i + 1}\n${secondsToTimestamp(start)} --> ${secondsToTimestamp(end)}\n${blocks[i]}\n\n`;
       }
       document.getElementById("output").textContent = srt;
     };
