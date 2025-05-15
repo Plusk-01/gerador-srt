@@ -15,47 +15,76 @@
 </head>
 <body>
   <h1>Gerador de SRT</h1>
-  <textarea id="inputText" placeholder="Cole seu texto aqui fdp..."></textarea><br>
+  <textarea id="inputText" placeholder="Cole seu texto aqui..."></textarea><br>
   <button id="convert">Converter para SRT</button>
-  <button id="download">Baixar Vírus</button>
+  <button id="download">Baixar SRT</button>
   <pre id="output"></pre>
 
   <script>
-    function splitIntoBlocksPreservingOriginal(text, maxChars = 500) {
-      const sentences = text.match(/[^.]+\./g) || [];
-      let blocks = [], current = "";
+    const CARACTERES_POR_BLOCO = 500;
+    const PALAVRAS_MIN_BLOCO = 80;
+    const PALAVRAS_MAX_BLOCO = 100;
+    const DURACAO_BLOCO = 30;
+    const INTERVALO_ENTRE_BLOCOS = 20;
 
-      for (let sentence of sentences) {
-        sentence = sentence.trim();
-        if ((current + " " + sentence).trim().length <= maxChars) {
-          current = (current + " " + sentence).trim();
+    function converterParaSRT(texto) {
+      let srt = '';
+      let contador = 1;
+      let tempoAcumulado = 0;
+      let palavras = texto.split(/\s+/);
+      let blocoAtual = '';
+      let palavrasNoBloco = 0;
+
+      for (let palavra of palavras) {
+        if (blocoAtual.length + palavra.length <= CARACTERES_POR_BLOCO && palavrasNoBloco < PALAVRAS_MAX_BLOCO) {
+          blocoAtual += palavra + ' ';
+          palavrasNoBloco++;
         } else {
-          if (current.length > 0) blocks.push(current);
-          current = sentence;
+          let ultimoPontoFinal = blocoAtual.lastIndexOf('.');
+          if (ultimoPontoFinal !== -1 && ultimoPontoFinal !== blocoAtual.length - 1) {
+            let resto = blocoAtual.substring(ultimoPontoFinal + 1);
+            blocoAtual = blocoAtual.substring(0, ultimoPontoFinal + 1);
+            srt += formatarBlocoSRT(contador, tempoAcumulado, blocoAtual);
+            contador++;
+            tempoAcumulado += DURACAO_BLOCO + INTERVALO_ENTRE_BLOCOS;
+            blocoAtual = resto + palavra + ' ';
+            palavrasNoBloco = resto.split(/\s+/).length + 1;
+          } else {
+            srt += formatarBlocoSRT(contador, tempoAcumulado, blocoAtual);
+            contador++;
+            tempoAcumulado += DURACAO_BLOCO + INTERVALO_ENTRE_BLOCOS;
+            blocoAtual = palavra + ' ';
+            palavrasNoBloco = 1;
+          }
         }
       }
 
-      if (current.length > 0) blocks.push(current);
+      if (blocoAtual) {
+        srt += formatarBlocoSRT(contador, tempoAcumulado, blocoAtual);
+      }
 
-      return blocks;
+      return srt.trim();
     }
 
-    function secondsToTimestamp(seconds) {
-      const hrs = String(Math.floor(seconds / 3600)).padStart(2, '0');
-      const mins = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-      const secs = String(seconds % 60).padStart(2, '0');
-      return `${hrs}:${mins}:${secs},000`;
+    function formatarBlocoSRT(contador, tempoInicio, texto) {
+      const tempoFim = tempoInicio + DURACAO_BLOCO;
+      return `${contador}\n${formatarTempo(tempoInicio)} --> ${formatarTempo(tempoFim)}\n${texto.trim()}\n\n`;
+    }
+
+    function formatarTempo(segundos) {
+      const horas = Math.floor(segundos / 3600);
+      const minutos = Math.floor((segundos % 3600) / 60);
+      const segsRestantes = Math.floor(segundos % 60);
+      return `${pad(horas)}:${pad(minutos)}:${pad(segsRestantes)},000`;
+    }
+
+    function pad(numero, tamanho = 2) {
+      return numero.toString().padStart(tamanho, '0');
     }
 
     document.getElementById("convert").onclick = function () {
       const inputText = document.getElementById("inputText").value;
-      const blocks = splitIntoBlocksPreservingOriginal(inputText);
-      let srt = "";
-      for (let i = 0; i < blocks.length; i++) {
-        const start = i * 45;
-        const end = start + 30;
-        srt += `${i + 1}\n${secondsToTimestamp(start)} --> ${secondsToTimestamp(end)}\n${blocks[i]}\n\n`;
-      }
+      const srt = converterParaSRT(inputText);
       document.getElementById("output").textContent = srt;
     };
 
